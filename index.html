@@ -219,7 +219,25 @@ const el = (id)=>document.getElementById(id);
 let restaurants = load();
 let userLocation = null; // {lat, lng}
 let editingId = null;
+let json = fetch('favorites_restaurants.json')
+  .then(response => response.json())
+  .then(data => {
+    // Merge with localStorage data if any
+    const localData = JSON.parse(localStorage.getItem('restaurants') || '[]');
+    const mergedData = [...data, ...localData];
+    localStorage.setItem('restaurants', JSON.stringify(mergedData));
+    renderRestaurants(mergedData);
+  })
+  .catch(error => console.error('Error loading JSON:', error));
 
+  document.getElementById('addBtn').addEventListener('click', () => {
+  const newRestaurant = {
+    name: document.getElementById('nameInput').value,
+    location: document.getElementById('locationInput').value,
+    rating: parseFloat(document.getElementById('ratingInput').value),
+    tags: document.getElementById('tagsInput').value.split(',').map(tag => tag.trim())
+  };
+  
 // helpers
 function uuidv4(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
 function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(restaurants)); }
