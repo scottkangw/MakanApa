@@ -1,0 +1,47 @@
+[
+  {
+    "id": "5c799ac0-724f-4e3d-abc9-2650e2726194",
+    "name": "Hai Kah Lang Seafood Noodle and Fish Head Noodle",
+    "address": "",
+    "lat": 3.1006737,
+    "lng": 101.7413509,
+    "rating": null,
+    "price_level": null,
+    "tags": [],
+    "maps_url": "https://www.google.com/maps/place/Hai+Kah+Lang+Seafood+Noodle+and+Fish+Head+Noodle/@3.1009792,101.7407486,18.79z/data=!4m10!1m3!2m2!1sRestaurants!6e5!3m5!1s0x31cc35b4a1bc8467:0x19fa778b8efacd63!8m2!3d3.1006737!4d101.7413509!16s%2Fg%2F11smfg5nk5?authuser=0&entry=ttu&g_ep=EgoyMDI1MDgwNi4wIKXMDSoASAFQAw%3D%3D",
+    "place_id": null,
+    "open_now": null,
+    "added_at": "2025-08-12T13:04:07.324Z",
+    "_distance_km": 2.243148836167957
+  },
+  {
+    "id": "86d2b8e0-9a0b-4c30-8460-4b6aa115e650",
+    "name": "Sakura Sushi Japanese Restaurant",
+    "address": "",
+    "lat": 3.1314182,
+    "lng": 101.7540785,
+    "rating": null,
+    "price_level": null,
+    "tags": [],
+    "maps_url": "https://www.google.com/maps/place/Sakura+Sushi+Japanese+Restaurant/@3.1314182,101.7540785,21z/data=!4m11!1m3!2m2!1sRestaurants!6e5!3m6!1s0x31cc36f5323bba95:0x5631f3773ac49e0e!8m2!3d3.1314182!4d101.7543762!15sCgtSZXN0YXVyYW50c1oNIgtyZXN0YXVyYW50c5IBE2phcGFuZXNlX3Jlc3RhdXJhbnSqAUQQASoPIgtyZXN0YXVyYW50cygAMh4QASIa4iedZWtQTBEhPBWiwUE7GKzd5slXHymgamgyDxACIgtyZXN0YXVyYW50c-ABAA!16s%2Fg%2F11c1vbh6s_?authuser=0&entry=ttu&g_ep=EgoyMDI1MDgwNi4wIKXMDSoASAFQAw%3D%3D",
+    "place_id": null,
+    "open_now": null,
+    "added_at": "2025-08-12T13:02:58.784Z",
+    "_distance_km": 2.9646191884361714
+  },
+  {
+    "id": "bc6906be-4182-40d2-b09f-0aec1f04ebb4",
+    "name": "Restoran Chong Ko Hakka Noodle 彰哥客家面",
+    "address": "",
+    "lat": 3.1286344,
+    "lng": 101.7512642,
+    "rating": null,
+    "price_level": null,
+    "tags": [],
+    "maps_url": "https://www.google.com/maps/place/Restoran+Chong+Ko+Hakka+Noodle+%E5%BD%B0%E5%93%A5%E5%AE%A2%E5%AE%B6%E9%9D%A2/@3.1286344,101.7512642,21z/data=!4m10!1m3!2m2!1sRestaurants!6e5!3m5!1s0x31cc3661ccc08497:0x18a578399815d7b6!8m2!3d3.1286869!4d101.7513999!16s%2Fg%2F1tdp73k6?authuser=0&entry=ttu&g_ep=EgoyMDI1MDgwNi4wIKXMDSoASAFQAw%3D%3D",
+    "place_id": null,
+    "open_now": null,
+    "added_at": "2025-08-12T13:02:10.309Z",
+    "_distance_km": 2.771981837513154
+  }
+]
