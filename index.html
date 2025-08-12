@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>My Favorite Restaurants — Maps + Sort & Filter</title>
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --muted:#6b7280; --accent:#2563eb;
+    --radius:12px; --shadow: 0 6px 18px rgba(20,20,40,0.06);
+    font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  html,body{height:100%; margin:0; background:var(--bg); color:#0f172a;}
+  .wrap{max-width:1100px; margin:28px auto; padding:20px;}
+  header{display:flex; gap:20px; align-items:center; margin-bottom:18px;}
+  h1{margin:0; font-size:20px;}
+  p.lead{margin:0; color:var(--muted); font-size:13px;}
+  .grid{display:grid; grid-template-columns: 420px 1fr; gap:18px; align-items:start;}
+  @media (max-width:900px){ .grid{grid-template-columns: 1fr;} }
+  .card{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;}
+  label{display:block; font-weight:600; font-size:13px; margin-bottom:6px;}
+  input[type="text"], input[type="number"], select, textarea{
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e6e9ee; outline:none;
+    font-size:14px; box-sizing:border-box;
+  }
+  textarea{min-height:84px; resize:vertical;}
+  .muted{color:var(--muted); font-size:13px;}
+  .row{display:flex; gap:8px; align-items:center;}
+  .btn{display:inline-block; padding:9px 12px; border-radius:9px; background:var(--accent); color:white; border:none; cursor:pointer; font-weight:600;}
+  .btn.ghost{background:transparent; color:var(--accent); border:1px solid #dbeafe;}
+  .controls{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .list{display:grid; gap:12px; margin-top:12px;}
+  .card-restaurant{display:flex; gap:12px; padding:12px; align-items:flex-start; border-radius:10px; border:1px solid #eef2ff; background:linear-gradient(180deg,#fff,#fcfdff);}
+  .r-info{flex:1;}
+  .r-meta{display:flex; gap:8px; flex-wrap:wrap; color:var(--muted); font-size:13px;}
+  .chip{background:#f1f5f9; padding:6px 8px; border-radius:999px; font-size:13px;}
+  .small{font-size:12px;}
+  .actions{display:flex; gap:6px;}
+  .danger{background:#ef4444;}
+  .tag-input{display:flex; gap:8px; margin-top:8px;}
+  .tags{display:flex; gap:6px; flex-wrap:wrap;}
+  .tag{background:#eef2ff; color:#1e3a8a; padding:6px 8px; border-radius:999px; font-size:12px;}
+  .topbar{display:flex; gap:8px; justify-content:space-between; align-items:center;}
+  .filter-row{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; align-items:center;}
+  .hint{font-size:12px; color:var(--muted);}
+  footer{margin-top:18px; font-size:13px; color:var(--muted);}
+  a.link{color:var(--accent); text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>My Favorite Restaurants</h1>
+      <p class="lead">Add from Google Maps, sort & filter them, and keep them locally on your browser.</p>
+    </div>
+    <div style="margin-left:auto" class="muted small">Saved in localStorage • Works offline</div>
+  </header>
+
+  <div class="grid">
+    <!-- Left column: Add / Settings -->
+    <div class="card">
+      <label>1) Paste Google Maps URL (or type manually)</label>
+      <input id="mapsUrl" placeholder="Paste full Google Maps sharing URL (https://goo.gl/maps/... or https://www.google.com/maps/...)">
+      <div style="margin-top:8px" class="row">
+        <button class="btn" id="extractBtn">Extract from URL</button>
+        <button class="btn ghost" id="clearFormBtn">Clear Form</button>
+      </div>
+      <div style="height:12px"></div>
+
+      <label>Name</label>
+      <input id="name" placeholder="Restaurant name (auto-filled if URL contains it)">
+
+      <label style="margin-top:8px">Address / Notes</label>
+      <textarea id="address" placeholder="Address or short note"></textarea>
+
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <div style="flex:1">
+          <label>Rating (0–5)</label>
+          <input id="rating" type="number" min="0" max="5" step="0.1" placeholder="e.g. 4.3">
+        </div>
+        <div style="width:110px">
+          <label>Price level</label>
+          <select id="price_level">
+            <option value="">—</option>
+            <option value="1"> $ </option>
+            <option value="2"> $$ </option>
+            <option value="3"> $$$ </option>
+            <option value="4"> $$$$ </option>
+          </select>
+        </div>
+      </div>
+
+      <label style="margin-top:8px">Cuisines / Tags (comma separated)</label>
+      <input id="tagsInput" placeholder="e.g. Japanese, ramen, casual">
+
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <div style="flex:1">
+          <label>Latitude</label>
+          <input id="lat" placeholder="Latitude (optional)">
+        </div>
+        <div style="flex:1">
+          <label>Longitude</label>
+          <input id="lng" placeholder="Longitude (optional)">
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+        <button class="btn" id="addBtn">Add / Save</button>
+        <button class="btn ghost" id="useGeoBtn">Use my current location for distance checks</button>
+        <div style="margin-left:auto" class="hint" id="geoStatus">Distance: unknown</div>
+      </div>
+
+      <hr style="margin:14px 0; border:none; border-top:1px solid #eef2ff">
+
+      <label>Optional: Google Places API Key</label>
+      <input id="gapiKey" placeholder="Paste Places API key to auto-fill details (optional)">
+      <div class="hint" style="margin-top:6px">If provided and you press "Extract", the page will try to fetch rating, opening_hours, price_level. Keep your key private.</div>
+
+      <div style="margin-top:12px; display:flex; gap:8px;">
+        <button class="btn ghost" id="clearAll">Clear all saved</button>
+        <button class="btn ghost" id="exportBtn">Export JSON</button>
+        <button class="btn ghost" id="importBtn">Import JSON</button>
+        <input type="file" id="importFile" style="display:none" accept="application/json">
+      </div>
+
+      <div style="margin-top:12px" class="hint">
+        How to get useful info from Google Maps: Paste a full Maps link (the shared link or the address-bar URL). Many Google Maps URLs contain an <code>@lat,lng,zoom</code> marker we can parse.
+      </div>
+    </div>
+
+    <!-- Right column: Filters + list -->
+    <div>
+      <div class="card topbar">
+        <div>
+          <label>Search</label>
+          <input id="search" placeholder="Search name or tag">
+        </div>
+        <div style="width:220px">
+          <label>Sort by</label>
+          <select id="sortBy">
+            <option value="added_desc">Date added (new → old)</option>
+            <option value="added_asc">Date added (old → new)</option>
+            <option value="name_asc">Name A → Z</option>
+            <option value="name_desc">Name Z → A</option>
+            <option value="rating_desc">Rating high → low</option>
+            <option value="distance_asc">Distance (near → far)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px;">
+        <div class="filter-row">
+          <div style="width:140px">
+            <label>Min rating</label>
+            <select id="minRating">
+              <option value="">Any</option>
+              <option value="4.5">4.5+</option>
+              <option value="4.0">4.0+</option>
+              <option value="3.5">3.5+</option>
+              <option value="3.0">3.0+</option>
+            </select>
+          </div>
+          <div style="width:140px">
+            <label>Max distance (km)</label>
+            <input id="maxDistance" type="number" min="0" placeholder="e.g. 10">
+          </div>
+          <div style="width:140px">
+            <label>Price level</label>
+            <select id="filterPrice">
+              <option value="">Any</option>
+              <option value="1">$</option>
+              <option value="2">$$</option>
+              <option value="3">$$$</option>
+              <option value="4">$$$$</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <label>&nbsp;</label>
+            <div class="row">
+              <label class="muted small"><input type="checkbox" id="filterOpenNow"> Open now</label>
+              <button class="btn ghost" id="resetFilters" style="margin-left:auto">Reset filters</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="list" class="list" aria-live="polite" style="margin-top:12px"></div>
+        <div id="empty" class="muted" style="margin-top:8px; display:none;">No restaurants found. Add some from the left panel!</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Tip: you can export your list as JSON and re-import it on another device. If you add a Google API key, the app will optionally fetch extra fields from Places (your key is never uploaded anywhere outside your browser).
+  </footer>
+</div>
+
+<script>
+/*
+  Favorites Restaurants app
+  - stores items in localStorage under key 'fav_restaurants'
+  - structure for each restaurant:
+    {
+      id: uuid,
+      name, address, lat, lng,
+      rating: number or null,
+      price_level: 1..4 or null,
+      tags: [..],
+      maps_url: original url,
+      place_id: optional,
+      added_at: ISO string,
+      open_now: boolean | null (if known)
+    }
+*/
+
+const STORAGE_KEY = 'fav_restaurants_v1';
+const el = (id)=>document.getElementById(id);
+
+let restaurants = load();
+let userLocation = null; // {lat, lng}
+let editingId = null;
+
+// helpers
+function uuidv4(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(restaurants)); }
+function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){ return []; } }
+function haversineKm(lat1,lng1,lat2,lng2){
+  if([lat1,lng1,lat2,lng2].some(v=>v==null||v===''||isNaN(v))) return null;
+  const toR = a=>a*Math.PI/180;
+  const R = 6371;
+  const dLat = toR(lat2-lat1);
+  const dLon = toR(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toR(lat1))*Math.cos(toR(lat2))*Math.sin(dLon/2)**2;
+  const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R*c;
+}
+
+function render(){
+  const list = el('list');
+  list.innerHTML = '';
+  // apply filters
+  const q = el('search').value.trim().toLowerCase();
+  const minRating = parseFloat(el('minRating').value||'0') || 0;
+  const maxDistance = el('maxDistance').value ? parseFloat(el('maxDistance').value) : null;
+  const filterPrice = el('filterPrice').value || '';
+  const filterOpenNow = el('filterOpenNow').checked;
+  const sortBy = el('sortBy').value;
+
+  let filtered = restaurants.filter(r=>{
+    if(q){
+      const inName = (r.name||'').toLowerCase().includes(q);
+      const inTags = (r.tags||[]).some(t=>t.toLowerCase().includes(q));
+      const inAddr = (r.address||'').toLowerCase().includes(q);
+      if(!(inName||inTags||inAddr)) return false;
+    }
+    if(minRating>0 && (r.rating==null || r.rating < minRating)) return false;
+    if(filterPrice && String(r.price_level) !== filterPrice) return false;
+    if(filterOpenNow && r.open_now !== true) return false; // note: requires Places data to be meaningful
+    if(maxDistance != null && userLocation && r.lat!=null && r.lng!=null){
+      const dist = haversineKm(userLocation.lat, userLocation.lng, parseFloat(r.lat), parseFloat(r.lng));
+      if(dist==null || dist > maxDistance) return false;
+    } else if(maxDistance != null && !userLocation) {
+      // if user asked to filter by distance but didn't allow location, treat as unknown -> filter out
+      return false;
+    }
+    return true;
+  });
+
+  // add computed distance for sorting & display
+  for(const r of filtered){
+    if(userLocation && r.lat && r.lng){
+      r._distance_km = haversineKm(userLocation.lat, userLocation.lng, parseFloat(r.lat), parseFloat(r.lng));
+    } else r._distance_km = null;
+  }
+
+  // sorting
+  filtered.sort((a,b)=>{
+    switch(sortBy){
+      case 'added_desc': return new Date(b.added_at) - new Date(a.added_at);
+      case 'added_asc': return new Date(a.added_at) - new Date(b.added_at);
+      case 'name_asc': return (a.name||'').localeCompare(b.name||'');
+      case 'name_desc': return (b.name||'').localeCompare(a.name||'');
+      case 'rating_desc': return (b.rating||0) - (a.rating||0);
+      case 'distance_asc': {
+        const da = a._distance_km == null ? Infinity : a._distance_km;
+        const db = b._distance_km == null ? Infinity : b._distance_km;
+        return da - db;
+      }
+    }
+    return 0;
+  });
+
+  if(filtered.length === 0){
+    el('empty').style.display = 'block';
+  } else el('empty').style.display = 'none';
+
+  for(const r of filtered){
+    const card = document.createElement('div'); card.className='card-restaurant';
+    const left = document.createElement('div'); left.style.width='72px';
+    left.innerHTML = `<div style="width:72px;height:72px;border-radius:8px;background:linear-gradient(180deg,#eef2ff,#ffffff);display:flex;align-items:center;justify-content:center;font-weight:700;color:#1e3a8a">${ (r.price_level?('$'.repeat(r.price_level)):'R') }</div>`;
+    const info = document.createElement('div'); info.className='r-info';
+    const title = document.createElement('div'); title.style.display='flex'; title.style.justifyContent='space-between'; title.style.alignItems='center';
+    const nameEl = document.createElement('div'); nameEl.innerHTML = `<div style="font-weight:700">${escapeHtml(r.name||'Unnamed')}</div><div class="muted small">${escapeHtml(r.address||'')}</div>`;
+    const actions = document.createElement('div'); actions.className='actions';
+
+    const editBtn = document.createElement('button'); editBtn.className='btn ghost small'; editBtn.textContent='Edit';
+    editBtn.addEventListener('click',()=> populateFormForEdit(r.id));
+    const delBtn = document.createElement('button'); delBtn.className='btn danger small'; delBtn.textContent='Delete';
+    delBtn.addEventListener('click',()=>{
+      if(confirm('Delete this restaurant?')) { restaurants = restaurants.filter(x=>x.id!==r.id); save(); render(); }
+    });
+
+    actions.appendChild(editBtn); actions.appendChild(delBtn);
+    title.appendChild(nameEl); title.appendChild(actions);
+
+    const meta = document.createElement('div'); meta.className='r-meta';
+    const ratingChip = document.createElement('div'); ratingChip.className='chip'; ratingChip.textContent = '⭐ ' + (r.rating != null ? r.rating : '—');
+    const tagsChip = document.createElement('div'); tagsChip.className='chip'; tagsChip.textContent = (r.tags && r.tags.length? r.tags.join(', '): 'no tags');
+    meta.appendChild(ratingChip); meta.appendChild(tagsChip);
+
+    if(r._distance_km != null){ const d = r._distance_km.toFixed(2) + ' km'; const dchip = document.createElement('div'); dchip.className='chip'; dchip.textContent = d; meta.appendChild(dchip); }
+    if(r.open_now === true) { const op = document.createElement('div'); op.className='chip'; op.textContent = 'Open now'; meta.appendChild(op); }
+    if(r.maps_url){ const link = document.createElement('a'); link.href=r.maps_url; link.target='_blank'; link.className='muted small'; link.textContent='Open in Maps'; link.style.marginLeft='8px'; meta.appendChild(link); }
+
+    const extra = document.createElement('div'); extra.className='small muted'; extra.textContent = 'Added: ' + (new Date(r.added_at)).toLocaleString();
+
+    info.appendChild(title); info.appendChild(meta); info.appendChild(extra);
+
+    card.appendChild(left); card.appendChild(info);
+    list.appendChild(card);
+  }
+}
+
+function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]); }
+
+// UI actions
+el('addBtn').addEventListener('click', ()=>{
+  const data = {
+    id: editingId || uuidv4(),
+    name: el('name').value.trim() || 'Unnamed',
+    address: el('address').value.trim() || '',
+    lat: el('lat').value ? parseFloat(el('lat').value) : null,
+    lng: el('lng').value ? parseFloat(el('lng').value) : null,
+    rating: el('rating').value ? parseFloat(el('rating').value) : null,
+    price_level: el('price_level').value ? parseInt(el('price_level').value) : null,
+    tags: parseTags(el('tagsInput').value),
+    maps_url: el('mapsUrl').value.trim() || null,
+    place_id: null,
+    open_now: null,
+    added_at: editingId ? (restaurants.find(x=>x.id===editingId)?.added_at || new Date().toISOString()) : new Date().toISOString()
+  };
+
+  if(editingId){
+    restaurants = restaurants.map(r => r.id===editingId ? {...r, ...data} : r);
+    editingId = null;
+    el('addBtn').textContent = 'Add / Save';
+  } else {
+    restaurants.unshift(data);
+  }
+  save();
+  clearForm();
+  render();
+});
+
+el('clearFormBtn').addEventListener('click', ()=> clearForm());
+
+el('extractBtn').addEventListener('click', async ()=>{
+  const url = el('mapsUrl').value.trim();
+  if(!url) return alert('Paste a Google Maps URL first.');
+  // parse lat,lng from '@lat,lng' or from 'place/.../data=!3m1!4b1!4m5!...'
+  const parsed = parseMapsUrl(url);
+  if(parsed.name) el('name').value = parsed.name;
+  if(parsed.lat) el('lat').value = parsed.lat;
+  if(parsed.lng) el('lng').value = parsed.lng;
+  if(parsed.place_id) {
+    // set place id to be stored later if we fetch details
+    el('mapsUrl').dataset.place_id = parsed.place_id;
+  }
+  // if API key provided, attempt to fetch details (Places Details) — only in browser and only with user's key
+  const apiKey = el('gapiKey').value.trim();
+  if(apiKey && parsed.place_id){
+    const placeId = parsed.place_id;
+    try{
+      // Use Places Details webservice (CORS may be blocked unless key allows)
+      // We'll try the JSON endpoint: https://maps.googleapis.com/maps/api/place/details/json?place_id=...&key=...
+      const urlFetch = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=name,rating,formatted_address,price_level,opening_hours,geometry,place_id&key=${encodeURIComponent(apiKey)}`;
+      const res = await fetch(urlFetch);
+      const j = await res.json();
+      if(j.status === 'OK' && j.result){
+        const r = j.result;
+        el('name').value = r.name || el('name').value;
+        el('address').value = r.formatted_address || el('address').value;
+        if(r.geometry && r.geometry.location){
+          el('lat').value = r.geometry.location.lat;
+          el('lng').value = r.geometry.location.lng;
+        }
+        if(r.rating) el('rating').value = r.rating;
+        if(r.price_level) el('price_level').value = r.price_level;
+        if(r.opening_hours && typeof r.opening_hours.open_now !== 'undefined') {
+          // show status to user and we will store open_now on save
+          alert('Places API reports open_now = ' + (r.opening_hours.open_now ? 'OPEN' : 'CLOSED'));
+          // we'll store it into a temporary attribute so Add uses it
+          el('addBtn').dataset.open_now = r.opening_hours.open_now ? '1':'0';
+        }
+        el('mapsUrl').dataset.place_id = r.place_id || parsed.place_id;
+      } else {
+        alert('Places API returned: ' + (j.status || 'unknown error') + (j.error_message? '\n' + j.error_message: ''));
+      }
+    } catch(err){
+      console.warn('Places API fetch error', err);
+      alert('Failed to call Places API from browser. CORS or invalid key may be the cause. The app still works without it — fill fields manually.');
+    }
+  }
+});
+
+// when adding, if addBtn.dataset.open_now set, we need to store it
+el('addBtn').addEventListener('click', ()=>{
+  // after save, make sure to attach open_now if available from earlier extract
+  const last = restaurants[0];
+  if(last && el('addBtn').dataset.open_now){
+    last.open_now = el('addBtn').dataset.open_now === '1';
+    delete el('addBtn').dataset.open_now;
+    save();
+  }
+});
+
+// Use geolocation to get user position
+el('useGeoBtn').addEventListener('click', ()=>{
+  if(!navigator.geolocation) return alert('Geolocation not supported in this browser.');
+  navigator.geolocation.getCurrentPosition((pos)=>{
+    userLocation = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+    el('geoStatus').textContent = `Distance enabled • ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+    render();
+  }, (err)=>{
+    alert('Geolocation failed or denied: ' + (err.message || err.code));
+  }, {enableHighAccuracy:false, maximumAge:60000, timeout:10000});
+});
+
+// filters & inputs hook
+['search','sortBy','minRating','maxDistance','filterPrice','filterOpenNow'].forEach(id=>{
+  el(id).addEventListener('input', ()=> render());
+});
+el('resetFilters').addEventListener('click', ()=>{
+  el('search').value = ''; el('minRating').value=''; el('maxDistance').value=''; el('filterPrice').value=''; el('filterOpenNow').checked=false;
+  render();
+});
+
+// clear all saved
+el('clearAll').addEventListener('click', ()=>{
+  if(confirm('Clear ALL saved restaurants? This cannot be undone.')) { restaurants=[]; save(); render(); }
+});
+
+// export
+el('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(restaurants, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'favorites_restaurants.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// import
+el('importBtn').addEventListener('click', ()=> el('importFile').click());
+el('importFile').addEventListener('change', async (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const txt = await f.text();
+  try{
+    const arr = JSON.parse(txt);
+    if(!Array.isArray(arr)) throw 'Not an array';
+    // naive merge: just add items with new UUIDs to avoid id collisions
+    const now = new Date().toISOString();
+    const cleaned = arr.map(item => ({...item, id: uuidv4(), added_at: item.added_at || now}));
+    restaurants = cleaned.concat(restaurants);
+    save(); render();
+    alert('Imported ' + cleaned.length + ' items.');
+  }catch(err){
+    alert('Invalid JSON import: ' + err);
+  } finally { e.target.value = ''; }
+});
+
+// populate form for editing
+function populateFormForEdit(id){
+  const r = restaurants.find(x=>x.id===id); if(!r) return;
+  editingId = id;
+  el('mapsUrl').value = r.maps_url || '';
+  el('name').value = r.name || '';
+  el('address').value = r.address || '';
+  el('lat').value = r.lat || '';
+  el('lng').value = r.lng || '';
+  el('rating').value = r.rating || '';
+  el('price_level').value = r.price_level || '';
+  el('tagsInput').value = (r.tags||[]).join(', ');
+  el('addBtn').textContent = 'Save changes';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// clear form
+function clearForm(){
+  editingId = null;
+  el('mapsUrl').value=''; el('name').value=''; el('address').value=''; el('lat').value=''; el('lng').value='';
+  el('rating').value=''; el('price_level').value=''; el('tagsInput').value='';
+  el('addBtn').textContent = 'Add / Save'; delete el('addBtn').dataset.open_now;
+}
+
+// parse comma tags
+function parseTags(s){ if(!s) return []; return s.split(',').map(t=>t.trim()).filter(Boolean); }
+
+// parse Google Maps URL - attempt to extract lat/lng, place id, and name
+function parseMapsUrl(url){
+  try{
+    const out = {raw:url, lat:null, lng:null, place_id:null, name:null};
+    // find @lat,lng pattern
+    const atMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if(atMatch){ out.lat = parseFloat(atMatch[1]); out.lng = parseFloat(atMatch[2]); }
+    // find place_id query param
+    const pidMatch = url.match(/place\/.*\/@|place\/([^\/\?]+)/);
+    // Try to extract place_id from URL param 'cid' or 'query_place_id' etc
+    const cid = url.match(/[?&]cid=(\d+)/);
+    if(cid){ out.place_id = cid[1]; }
+    // place ID sometimes in '/search/?api=1&query=...' or '/maps/place/NAME/'
+    // try to get a user-friendly name from path
+    try{
+      const u = new URL(url);
+      // If path contains '/maps/place/<name>'
+      const p = u.pathname.split('/');
+      const idx = p.indexOf('place');
+      if(idx >=0 && p[idx+1]) {
+        out.name = decodeURIComponent(p[idx+1].replace(/\+/g,' ')).replace(/\+/g,' ');
+      } else {
+        // fallback: use the 'q' query param or 'query' param
+        const q = u.searchParams.get('q') || u.searchParams.get('query');
+        if(q) out.name = q;
+      }
+    }catch(e){}
+    // Some shortened URLs (goo.gl/maps/... ) won't parse; user can paste expanded URL (open share->copy link).
+    // We'll also attempt to parse patterns like '!3dLAT!4dLNG' used in some Google maps URLs
+    const m3d = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    if(m3d){ out.lat = parseFloat(m3d[1]); out.lng = parseFloat(m3d[2]); }
+    // Another pattern: /@lat,long,zoomz
+    const p2 = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+),\d+z/);
+    if(p2){ out.lat = parseFloat(p2[1]); out.lng = parseFloat(p2[2]); }
+    return out;
+  }catch(e){ return {raw:url}; }
+}
+
+// initial render
+render();
+
+// keyboard helpers: Enter in URL input triggers extract
+el('mapsUrl').addEventListener('keydown', (ev)=>{ if(ev.key==='Enter'){ ev.preventDefault(); el('extractBtn').click(); } });
+
+// when saving, ensure open_now from dataset is stored — handled above
+
+</script>
+</body>
+</html>
