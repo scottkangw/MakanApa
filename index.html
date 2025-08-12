@@ -220,27 +220,53 @@ let restaurants = load();
 let userLocation = null; // {lat, lng}
 let editingId = null;
 
-window.addEventListener('DOMContentLoaded', () => {
-  fetch('/favorites_restaurants.json')
-    .then(res => res.json())
-    .then(data => {
-      // Save in localStorage for quick re-renders without refetch
-      localStorage.setItem('restaurants', JSON.stringify(data));
-      renderRestaurants(data);
-    })
-    .catch(err => console.error('Error loading JSON:', err));
-});
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('restaurants');
+      // if (!saved) {
+        fetch('https://scottkangw.github.io/MakanApa/favorites_restaurants.json')
+  .then(res => res.text()) // fetch as raw text
+  .then(txt => {
+    try {
+      const arr = JSON.parse(txt);
+      restaurants=[]; save(); render(); 
+      if (!Array.isArray(arr)) throw 'Not an array';
 
-function renderRestaurants(restaurants) {
-  const container = document.getElementById('restaurantList');
-  container.innerHTML = '';
-  restaurants.forEach(r => {
-    const item = document.createElement('div');
-    item.className = 'restaurant-item';
-    item.innerHTML = `<strong>${r.name}</strong> - ${r.location} (Rating: ${r.rating})`;
-    container.appendChild(item);
-  });
-}
+      // Check if already saved
+      const savedIds = new Set(restaurants.map(r => r.name));
+      const now = new Date().toISOString();
+      const cleaned = arr
+        .filter(item => !savedIds.has(item.name)) // skip duplicates
+        .map(item => ({
+          ...item,
+          id: uuidv4(),
+          added_at: item.added_at || now
+        }));
+
+      if (cleaned.length === 0) {
+        alert('No new restaurants to import.');
+        return;
+      }
+
+      // Merge with current restaurants list
+      restaurants = cleaned.concat(restaurants);
+      save();
+      render();
+      alert('Imported ' + cleaned.length + ' items.');
+
+    } catch (err) {
+      alert('Invalid JSON import: ' + err);
+      console.error('Raw data:', txt);
+    }
+  })
+  .catch(err => console.error('Fetch error:', err));
+      // }
+    });
+
+  
+
+
+
+
 
 // helpers
 function uuidv4(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
