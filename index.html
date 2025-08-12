@@ -219,25 +219,29 @@ const el = (id)=>document.getElementById(id);
 let restaurants = load();
 let userLocation = null; // {lat, lng}
 let editingId = null;
-let json = fetch('favorites_restaurants.json')
-  .then(response => response.json())
-  .then(data => {
-    // Merge with localStorage data if any
-    const localData = JSON.parse(localStorage.getItem('restaurants') || '[]');
-    const mergedData = [...data, ...localData];
-    localStorage.setItem('restaurants', JSON.stringify(mergedData));
-    renderRestaurants(mergedData);
-  })
-  .catch(error => console.error('Error loading JSON:', error));
 
-  document.getElementById('addBtn').addEventListener('click', () => {
-  const newRestaurant = {
-    name: document.getElementById('nameInput').value,
-    location: document.getElementById('locationInput').value,
-    rating: parseFloat(document.getElementById('ratingInput').value),
-    tags: document.getElementById('tagsInput').value.split(',').map(tag => tag.trim())
-  };
-  
+window.addEventListener('DOMContentLoaded', () => {
+  fetch('/favorites_restaurants.json')
+    .then(res => res.json())
+    .then(data => {
+      // Save in localStorage for quick re-renders without refetch
+      localStorage.setItem('restaurants', JSON.stringify(data));
+      renderRestaurants(data);
+    })
+    .catch(err => console.error('Error loading JSON:', err));
+});
+
+function renderRestaurants(restaurants) {
+  const container = document.getElementById('restaurantList');
+  container.innerHTML = '';
+  restaurants.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'restaurant-item';
+    item.innerHTML = `<strong>${r.name}</strong> - ${r.location} (Rating: ${r.rating})`;
+    container.appendChild(item);
+  });
+}
+
 // helpers
 function uuidv4(){ return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);}); }
 function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(restaurants)); }
