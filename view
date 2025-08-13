@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Favorite Restaurants</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  body { font-family: Arial, sans-serif; background: #f7f7f7; margin: 0; padding: 0; }
+  header { padding: 1rem; background: #333; color: white; text-align: center; }
+  .filters { display: flex; gap: .5rem; padding: 1rem; background: white; flex-wrap: wrap; }
+  .filters input, .filters select {
+    padding: .5rem; border: 1px solid #ccc; border-radius: 6px;
+  }
+  .container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; padding: 1rem; }
+  .card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  margin-bottom: 10px;
+}
+
+.image-container {
+  flex: 0 0 120px; /* fixed width for image section */
+  height: 90px;    /* fixed height */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f0f0f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* keep aspect ratio without cropping */
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.rating {
+  color: #f39c12;
+  margin-bottom: 4px;
+}
+
+.distance {
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.address {
+  color: #444;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+
+.map-link a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.map-link a:hover {
+  text-decoration: underline;
+}
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>My Favorite Restaurants</h1>
+</header>
+
+<div class="filters">
+  <input type="text" id="search" placeholder="Search by name or address">
+  <select id="minRating">
+    <option value="">Min Rating</option>
+    <option value="4">4+</option>
+    <option value="4.5">4.5+</option>
+  </select>
+  <button onclick="render()">Apply</button>
+</div>
+
+<div class="container" id="restaurantList">
+  <!-- Cards will appear here -->
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  // TODO: Replace with your Firebase config
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+      authDomain: "makanapa-f85b8.firebaseapp.com",
+      projectId: "makanapa-f85b8",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let restaurants = [];
+  let userLocation = null;
+
+  function haversineDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // km
+    const toRad = deg => deg * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+              Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+  async function loadRestaurants() {
+    restaurants = [];
+    const snapshot = await getDocs(collection(db, "restaurants"));
+    snapshot.forEach(doc => {
+      restaurants.push({ id: doc.id, ...doc.data() });
+    });
+    render();
+  }
+
+  function sortAndRender() {
+    if (userLocation) {
+      restaurants.forEach(r => {
+        if (r.lat && r.lng) {
+          r.distance = haversineDistance(userLocation.lat, userLocation.lng, r.lat, r.lng);
+        } else {
+          r.distance = Infinity;
+        }
+      });
+      restaurants.sort((a, b) => a.distance - b.distance);
+    }
+    render();
+  }
+
+  function render() {
+    const list = document.getElementById("restaurantList");
+    list.innerHTML = "";
+
+    const q = document.getElementById("search").value.trim().toLowerCase();
+    const minRating = parseFloat(document.getElementById("minRating").value || "0");
+
+    const filtered = restaurants.filter(r => {
+      if (q) {
+        const inName = (r.name || "").toLowerCase().includes(q);
+        const inAddr = (r.address || "").toLowerCase().includes(q);
+        if (!inName && !inAddr) return false;
+      }
+      if (minRating > 0 && (!r.rating || r.rating < minRating)) return false;
+      return true;
+    });
+
+filtered.forEach(r => {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.innerHTML = `
+    <div class="image-container">
+      <img src="${r.photo_url || 'http://scottkangw.github.io/MakanApa/food-and-restaurant.png'}" 
+           alt="${r.name}">
+    </div>
+    <div class="card-content">
+      <div class="card-title">${r.name || "Unnamed"}</div>
+      <div class="rating">⭐ ${r.rating || "N/A"}</div>
+      ${r.distance !== undefined && r.distance !== Infinity
+        ? `<div class="distance">📍 ${r.distance.toFixed(1)} km away</div>`
+        : ""}
+      <div class="address">${r.address || ""}</div>
+      <div class="map-link"><a href="${r.maps_url}" target="_blank">View on Google Maps</a></div>
+    </div>
+  `;
+  list.appendChild(card);
+});
+  }
+
+  function initLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          sortAndRender();
+        },
+        err => {
+          console.warn("Location access denied. Showing unsorted list.");
+          render();
+        }
+      );
+    } else {
+      render();
+    }
+  }
+initLocation();
+loadRestaurants();
+</script>
+
+</body>
+</html>
