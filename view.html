@@ -92,6 +92,7 @@
     <option value="4.5">4.5+</option>
   </select>
   <button onclick="render()">Apply</button>
+ <button class="btn ghost" id="useGeoBtn">📍</button>
 </div>
 
 <div class="container" id="restaurantList">
@@ -115,10 +116,22 @@
   let restaurants = [];
   let userLocation = null;
 
-   window.addEventListener('DOMContentLoaded', () => {
+  const el = (id)=>document.getElementById(id);
+ window.addEventListener('DOMContentLoaded', () => {
     initLocation();
-   });
-  
+  });
+
+  el('useGeoBtn').addEventListener('click', ()=>{
+  if(!navigator.geolocation) return alert('Geolocation not supported in this browser.');
+  navigator.geolocation.getCurrentPosition((pos)=>{
+    userLocation = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+    el('geoStatus').textContent = `Distance enabled • ${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`;
+    render();
+  }, (err)=>{
+    alert('Geolocation failed or denied: ' + (err.message || err.code));
+  }, {enableHighAccuracy:false, maximumAge:60000, timeout:10000});
+});
+
   function haversineDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // km
     const toRad = deg => deg * Math.PI / 180;
