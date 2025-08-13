@@ -112,13 +112,13 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  window.addEventListener('DOMContentLoaded', () => {
-    initLocation();
-   });
-
   let restaurants = [];
   let userLocation = null;
 
+   window.addEventListener('DOMContentLoaded', () => {
+    initLocation();
+   });
+  
   function haversineDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // km
     const toRad = deg => deg * Math.PI / 180;
