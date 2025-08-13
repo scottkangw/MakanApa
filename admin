@@ -1,1 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>MakanApa Restaurant CRUD</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background-color: #f2f2f2; }
+    input, button { margin: 5px; padding: 6px; }
+  </style>
+</head>
+<body>
+  <h1>MakanApa Restaurant CRUD</h1>
+    <label>1) Paste Google Maps URL (or type manually)</label>
+      <input id="mapsUrl" placeholder="Paste full Google Maps sharing URL (https://goo.gl/maps/... or https://www.google.com/maps/...)">
+      <div style="margin-top:8px" class="row">
+        <button class="btn" id="extractBtn">Extract from URL</button>
+        <button class="btn ghost" id="clearFormBtn">Clear Form</button>
+      </div>
+      <div style="height:12px"></div>
+      
+  <div>
+    <input id="name" placeholder="Name">
+    <input id="lat" placeholder="Latitude">
+    <input id="lng" placeholder="Longitude">
+    <input id="maps_url" placeholder="Google Maps URL" size="50">
+    <button onclick="addRestaurant()">Add Restaurant</button>
+  </div>
+
+  <table id="restaurantTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Latitude</th>
+        <th>Longitude</th>
+        <th>Maps URL</th>
+        <th>Added At</th>
+        <th>Distance (km)</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Firebase v8 SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "makanapa-f85b8.firebaseapp.com",
+      projectId: "makanapa-f85b8",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Sign in anonymously before doing anything
+  //   firebase.auth().signInAnonymously()
+  // .then(() => loadRestaurants())
+  // .catch(err => console.error("Auth error:", err));
+
+   window.addEventListener('DOMContentLoaded', () => {
+    loadRestaurants();
+   });
+
+document.getElementById("extractBtn").addEventListener("click", function () {
+    let url = document.getElementById("mapsUrl").value.trim();
+    if (!url) {
+        alert("Please paste a Google Maps URL.");
+        return;
+    }
+
+    // Fill the original maps_url field
+    document.getElementById("maps_url").value = url;
+
+    let lat = "";
+    let lng = "";
+    let name = "";
+
+    // Extract lat/lng from URLs containing @lat,lng
+    const coordMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (coordMatch) {
+        lat = coordMatch[1];
+        lng = coordMatch[2];
+    }
+
+    // Sometimes coordinates are in query params: ?q=lat,lng
+    const queryMatch = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (!lat && queryMatch) {
+        lat = queryMatch[1];
+        lng = queryMatch[2];
+    }
+
+    // Extract name from URL (replace + with spaces and decode)
+    const nameMatch = url.match(/place\/([^/]+)/);
+    if (nameMatch) {
+        name = decodeURIComponent(nameMatch[1].replace(/\+/g, " "));
+    }
+
+    // Update input fields
+    document.getElementById("lat").value = lat;
+    document.getElementById("lng").value = lng;
+    document.getElementById("name").value = name || "Unknown Name";
+
+});
+
+    const tableBody = document.querySelector("#restaurantTable tbody");
+
+    function renderRestaurant(doc) {
+      const data = doc.data();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input value="${data.name}" onchange="updateField('${doc.id}', 'name', this.value)"></td>
+        <td><input value="${data.lat}" onchange="updateField('${doc.id}', 'lat', parseFloat(this.value))"></td>
+        <td><input value="${data.lng}" onchange="updateField('${doc.id}', 'lng', parseFloat(this.value))"></td>
+        <td><input value="${data.maps_url}" onchange="updateField('${doc.id}', 'maps_url', this.value)"></td>
+        <td>${data.added_at}</td>
+        <td>${data._distance_km}</td>
+        <td><button onclick="deleteRestaurant('${doc.id}')">Delete</button></td>
+      `;
+      tableBody.appendChild(tr);
+    }
+
+    function loadRestaurants() {
+      tableBody.innerHTML = "";
+      db.collection("restaurants").orderBy("added_at", "desc").get()
+        .then(snapshot => {
+          snapshot.forEach(renderRestaurant);
+        })
+        .catch(err => console.error("Load error:", err));
+    }
+
+    function addRestaurant() {
+      const name = document.getElementById("name").value.trim();
+      const lat = parseFloat(document.getElementById("lat").value);
+      const lng = parseFloat(document.getElementById("lng").value);
+      const maps_url = document.getElementById("maps_url").value.trim();
+
+      if (!name || isNaN(lat) || isNaN(lng)) {
+        return alert("Please fill name, lat, lng");
+      }
+
+      const id = crypto.randomUUID();
+      const newData = {
+        id,
+        name,
+        lat,
+        lng,
+        maps_url,
+        added_at: new Date().toISOString(),
+        _distance_km: 0
+      };
+
+      db.collection("restaurants").doc(id).set(newData)
+        .then(loadRestaurants)
+        .catch(err => console.error("Add error:", err));
+    }
+
+    function updateField(docId, field, value) {
+      db.collection("restaurants").doc(docId).update({ [field]: value })
+        .catch(err => console.error("Update error:", err));
+    }
+
+    function deleteRestaurant(docId) {
+      if (confirm("Delete this restaurant?")) {
+        db.collection("restaurants").doc(docId).delete()
+          .then(loadRestaurants)
+          .catch(err => console.error("Delete error:", err));
+      }
+    }
+  </script>
+</body>
+</html>
 
