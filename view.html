@@ -118,7 +118,8 @@
   let userLocation = null;
 
   const el = (id)=>document.getElementById(id);
- window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById("search").addEventListener("input", render);
+  window.addEventListener('DOMContentLoaded', () => {
     initLocation();
   });
 
@@ -131,7 +132,7 @@
   }, (err)=>{
     alert('Geolocation failed or denied: ' + (err.message || err.code));
   }, {enableHighAccuracy:false, maximumAge:60000, timeout:10000});
-});
+  });
 
   function haversineDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; // km
